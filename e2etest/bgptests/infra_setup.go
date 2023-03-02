@@ -57,6 +57,7 @@ type HostBGPMode string
 const (
 	EBGPMode HostBGPMode = "ebgp"
 	IBGPMode HostBGPMode = "ibgp"
+	noImage              = ""
 )
 
 func init() {
@@ -78,31 +79,48 @@ A common use case is to validate a real cluster that doesn't offer the luxury of
 the way the containers are connected to the cluster.
 */
 func ExternalContainersSetup(externalContainers string, cs *clientset.Clientset) ([]*frrcontainer.FRR, error) {
+	var (
+		configs                 = externalContainersConfigs(noImage)
+		requiredContainersNames = strings.Split(externalContainers, ",")
+	)
+
 	err := validateContainersNames(externalContainers)
 	if err != nil {
 		return nil, err
 	}
-	names := strings.Split(externalContainers, ",")
-	configs := externalContainersConfigs()
-	toApply := make(map[string]frrcontainer.Config)
-	for _, n := range names {
-		if c, ok := configs[n]; ok {
-			toApply[n] = c
-		}
-	}
+
+	toApply := getRequiredConfigs(configs, requiredContainersNames)
 
 	res, err := frrcontainer.ConfigureExisting(toApply)
 	if err != nil {
 		return nil, err
 	}
 
-	if containsMultiHop(res) {
-		err = multiHopSetUp(res, defaultNextHopSettings, cs)
+	frrContainers, vrfContainers := splitVRFContainers(res)
+
+	if len(vrfContainers) > 0 {
+		err = vrfSetup(cs)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return res, nil
+
+	if containsMultiHop(frrContainers) {
+		err = multiHopSetUp(frrContainers, defaultNextHopSettings, cs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if containsMultiHop(vrfContainers) {
+		err = multiHopSetUp(vrfContainers, vrfNextHopSettings, cs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	allContainers := append(frrContainers, vrfContainers...)
+	return allContainers, nil
 }
 
 func HostContainerSetup(image string, bgpMode HostBGPMode) ([]*frrcontainer.FRR, error) {
@@ -288,10 +306,11 @@ func vrfSetup(cs *clientset.Clientset) error {
 	return nil
 }
 
-func externalContainersConfigs() map[string]frrcontainer.Config {
+func externalContainersConfigs(image string) map[string]frrcontainer.Config {
 	res := make(map[string]frrcontainer.Config)
 	res["ibgp-single-hop"] = frrcontainer.Config{
-		Name: "ibgp-single-hop",
+		Name:  "ibgp-single-hop",
+		Image: image,
 		Neighbor: frrconfig.NeighborConfig{
 			ASN:      metalLBASN,
 			Password: "ibgp-test",
@@ -302,9 +321,13 @@ func externalContainersConfigs() map[string]frrcontainer.Config {
 			BGPPort:  179,
 			Password: "ibgp-test",
 		},
+		Network:  "host",
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
 	}
 	res["ibgp-multi-hop"] = frrcontainer.Config{
-		Name: "ibgp-multi-hop",
+		Name:  "ibgp-multi-hop",
+		Image: image,
 		Neighbor: frrconfig.NeighborConfig{
 			ASN:      metalLBASN,
 			Password: "ibgp-test",
@@ -315,9 +338,13 @@ func externalContainersConfigs() map[string]frrcontainer.Config {
 			BGPPort:  180,
 			Password: "ibgp-test",
 		},
+		Network:  defaultNextHopSettings.multiHopNetwork,
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
 	}
 	res["ebgp-multi-hop"] = frrcontainer.Config{
-		Name: "ebgp-multi-hop",
+		Name:  "ebgp-multi-hop",
+		Image: image,
 		Neighbor: frrconfig.NeighborConfig{
 			ASN:      metalLBASN,
 			Password: "ebgp-test",
@@ -328,9 +355,14 @@ func externalContainersConfigs() map[string]frrcontainer.Config {
 			BGPPort:  180,
 			Password: "ebgp-test",
 		},
+		Network:  defaultNextHopSettings.multiHopNetwork,
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
 	}
 	res["ebgp-single-hop"] = frrcontainer.Config{
-		Name: "ebgp-single-hop",
+		Name:    "ebgp-single-hop",
+		Image:   image,
+		Network: "host",
 		Neighbor: frrconfig.NeighborConfig{
 			ASN:      metalLBASN,
 			MultiHop: false,
@@ -339,6 +371,76 @@ func externalContainersConfigs() map[string]frrcontainer.Config {
 			ASN:     externalASN,
 			BGPPort: 179,
 		},
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
+	}
+	res["ebgp-vrf-single-hop"] = frrcontainer.Config{
+		Name:    "ebgp-vrf-single-hop",
+		Image:   image,
+		Network: "host",
+		Neighbor: frrconfig.NeighborConfig{
+			ASN:      metalLBASNVRF,
+			Password: "vrf-test",
+			MultiHop: false,
+		},
+		Router: frrconfig.RouterConfig{
+			ASN:      externalASN,
+			Password: "vrf-test",
+			BGPPort:  179,
+			VRF:      vrfName,
+		},
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
+	}
+	res["ibgp-vrf-single-hop"] = frrcontainer.Config{
+		Name:    "ibgp-vrf-single-hop",
+		Image:   image,
+		Network: "host",
+		Neighbor: frrconfig.NeighborConfig{
+			ASN:      metalLBASNVRF,
+			Password: "vrf-test",
+			MultiHop: false,
+		},
+		Router: frrconfig.RouterConfig{
+			ASN:      metalLBASNVRF,
+			BGPPort:  179,
+			Password: "vrf-test",
+			VRF:      vrfName,
+		},
+		HostIPv4: hostIPv4,
+		HostIPv6: hostIPv6,
+	}
+	res["ibgp-vrf-multi-hop"] = frrcontainer.Config{
+		Name:  "ibgp-vrf-multi-hop",
+		Image: image,
+		Neighbor: frrconfig.NeighborConfig{
+			ASN:      metalLBASNVRF,
+			Password: "ibgp-test",
+			MultiHop: true,
+		},
+		Router: frrconfig.RouterConfig{
+			ASN:      metalLBASNVRF,
+			BGPPort:  180,
+			Password: "ibgp-test",
+			VRF:      vrfName,
+		},
+		Network: vrfNextHopSettings.multiHopNetwork,
+	}
+	res["ebgp-vrf-multi-hop"] = frrcontainer.Config{
+		Name:  "ebgp-vrf-multi-hop",
+		Image: image,
+		Neighbor: frrconfig.NeighborConfig{
+			ASN:      metalLBASNVRF,
+			Password: "ebgp-test",
+			MultiHop: true,
+		},
+		Router: frrconfig.RouterConfig{
+			ASN:      externalASN,
+			BGPPort:  180,
+			Password: "ebgp-test",
+			VRF:      vrfName,
+		},
+		Network: vrfNextHopSettings.multiHopNetwork,
 	}
 	return res
 }
@@ -571,16 +673,21 @@ func addMultiHopToNodes(cs *clientset.Clientset, targetNetwork, multiHopNetwork 
 }
 
 // validateContainersNames validates that the given string is a comma separated list of containers names.
-// The valid names are: ibgp-single-hop / ibgp-multi-hop / ebgp-single-hop / ebgp-multi-hop.
+// The valid names are: ibgp-single-hop / ibgp-multi-hop / ebgp-single-hop / ebgp-multi-hop
+// and ibgp-vrf-single-hop / ibgp-vrf-multi-hop / ebgp-vrf-single-hop / ebgp-vrf-multi-hop
 func validateContainersNames(containerNames string) error {
 	if len(containerNames) == 0 {
 		return fmt.Errorf("failed to validate containers names: got empty string")
 	}
 	validNames := map[string]bool{
-		"ibgp-single-hop": true,
-		"ibgp-multi-hop":  true,
-		"ebgp-single-hop": true,
-		"ebgp-multi-hop":  true,
+		"ibgp-single-hop":     true,
+		"ibgp-multi-hop":      true,
+		"ebgp-single-hop":     true,
+		"ebgp-multi-hop":      true,
+		"ibgp-vrf-single-hop": true,
+		"ibgp-vrf-multi-hop":  true,
+		"ebgp-vrf-single-hop": true,
+		"ebgp-vrf-multi-hop":  true,
 	}
 	names := strings.Split(containerNames, ",")
 	for _, n := range names {
@@ -631,4 +738,39 @@ func addContainerToNetwork(containerName, network string) error {
 
 func isVRFContainer(c *frrcontainer.FRR) bool {
 	return strings.Contains(c.Name, "vrf")
+}
+
+// getRequiredConfigs gets a map of FRR container configs and a list of required container names,
+// and returns a subset of the map that includes only the required containers.
+// If none of the required containers are found or one of the inputs is nil, it returns an empty map.
+func getRequiredConfigs(configs map[string]frrcontainer.Config, requiredContainersNames []string) map[string]frrcontainer.Config {
+	res := make(map[string]frrcontainer.Config)
+
+	if configs == nil || requiredContainersNames == nil {
+		return res
+	}
+
+	for _, containerName := range requiredContainersNames {
+		if containerConfig, ok := configs[containerName]; ok {
+			res[containerName] = containerConfig
+		}
+	}
+
+	return res
+}
+
+// splitVRFContainers takes a set of frr containers and split it to frr containers and vrf containers.
+func splitVRFContainers(containers []*frrcontainer.FRR) ([]*frrcontainer.FRR, []*frrcontainer.FRR) {
+	frrContainers := make([]*frrcontainer.FRR, 0)
+	vrfContainers := make([]*frrcontainer.FRR, 0)
+
+	for _, c := range containers {
+		if isVRFContainer(c) {
+			vrfContainers = append(vrfContainers, c)
+		} else {
+			frrContainers = append(frrContainers, c)
+		}
+	}
+
+	return frrContainers, vrfContainers
 }
