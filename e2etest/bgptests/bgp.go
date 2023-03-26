@@ -45,6 +45,7 @@ import (
 	testservice "go.universe.tf/metallb/e2etest/pkg/service"
 	"go.universe.tf/metallb/internal/ipfamily"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clientset "k8s.io/client-go/kubernetes"
@@ -146,6 +147,45 @@ var _ = ginkgo.Describe("BGP", func() {
 				testservice.WithSpecificIPs(svc, "192.168.10.100", "fc00:f853:ccd:e799::")
 			}),
 	)
+
+	ginkgo.Describe("Service with ETP=cluster", func() {
+		ginkgo.It("IPV4 - should not be announced from a node with a NetworkUnavailable condition", func() {
+			allNodes, err := cs.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+			framework.ExpectNoError(err)
+			nodeToSet := allNodes.Items[0].Name
+
+			_, svc := setupBGPService(f, ipfamily.IPv4, []string{v4PoolAddresses}, FRRContainers, func(svc *corev1.Service) {
+				testservice.TrafficPolicyCluster(svc)
+			})
+			defer testservice.Delete(cs, svc)
+			validateDesiredLB(svc)
+
+			for _, c := range FRRContainers {
+				validateService(cs, svc, allNodes.Items, c)
+			}
+
+			err = k8s.SetCondition(cs, nodeToSet, corev1.NodeNetworkUnavailable, corev1.ConditionTrue)
+			framework.ExpectNoError(err)
+			defer func() {
+				err = k8s.SetCondition(cs, nodeToSet, corev1.NodeNetworkUnavailable, corev1.ConditionFalse)
+				framework.ExpectNoError(err)
+			}()
+
+			ginkgo.By("validating service is not announced from the unavailable node")
+			for _, c := range FRRContainers {
+				Eventually(func() error {
+					return validateServiceNoWait(cs, svc, []v1.Node{allNodes.Items[0]}, c)
+				}, time.Minute, time.Second).Should(HaveOccurred())
+			}
+
+			ginkgo.By("validating service is announced from the other available nodes")
+			for _, c := range FRRContainers {
+				Eventually(func() error {
+					return validateServiceNoWait(cs, svc, allNodes.Items[1:], c)
+				}, time.Minute, time.Second).ShouldNot(HaveOccurred())
+			}
+		})
+	})
 
 	ginkgo.DescribeTable("A service of protocol load balancer should work with ETP=local", func(pairingIPFamily ipfamily.Family, poolAddresses []string, tweak testservice.Tweak) {
 
