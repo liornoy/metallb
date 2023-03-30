@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+const nodeName = "pandora"
+
 func mustSelector(s string) labels.Selector {
 	res, err := labels.Parse(s)
 	if err != nil {
@@ -211,7 +213,7 @@ func TestBGPSpeaker(t *testing.T) {
 	}
 	newBGP = b.NewSessionManager
 	c, err := newController(controllerConfig{
-		MyNode:        "pandora",
+		MyNode:        nodeName,
 		DisableLayer2: true,
 		bgpType:       bgpNative,
 	})
@@ -277,7 +279,7 @@ func TestBGPSpeaker(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -305,7 +307,7 @@ func TestBGPSpeaker(t *testing.T) {
 							Addresses: []v1.EndpointAddress{
 								{
 									IP:       "2.3.4.5",
-									NodeName: pointer.StrPtr("pandora"),
+									NodeName: pointer.StrPtr(nodeName),
 								},
 							},
 						},
@@ -409,7 +411,7 @@ func TestBGPSpeaker(t *testing.T) {
 								},
 								{
 									IP:       "2.3.4.6",
-									NodeName: pointer.StrPtr("pandora"),
+									NodeName: pointer.StrPtr(nodeName),
 								},
 							},
 						},
@@ -449,7 +451,7 @@ func TestBGPSpeaker(t *testing.T) {
 								},
 								{
 									IP:       "2.3.4.6",
-									NodeName: pointer.StrPtr("pandora"),
+									NodeName: pointer.StrPtr(nodeName),
 								},
 							},
 						},
@@ -463,7 +465,7 @@ func TestBGPSpeaker(t *testing.T) {
 							NotReadyAddresses: []v1.EndpointAddress{
 								{
 									IP:       "2.3.4.6",
-									NodeName: pointer.StrPtr("pandora"),
+									NodeName: pointer.StrPtr(nodeName),
 								},
 							},
 						},
@@ -551,7 +553,7 @@ func TestBGPSpeaker(t *testing.T) {
 							NotReadyAddresses: []v1.EndpointAddress{
 								{
 									IP:       "2.3.4.6",
-									NodeName: pointer.StrPtr("pandora"),
+									NodeName: pointer.StrPtr(nodeName),
 								},
 							},
 						},
@@ -587,12 +589,12 @@ func TestBGPSpeaker(t *testing.T) {
 								AggregationLength: 32,
 								LocalPref:         100,
 								Communities:       map[uint32]bool{1234: true, 2345: true},
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 							{
 								AggregationLength: 24,
 								LocalPref:         1000,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -654,7 +656,7 @@ func TestBGPSpeaker(t *testing.T) {
 								AggregationLength: 32,
 								LocalPref:         100,
 								Communities:       map[uint32]bool{1234: true, 2345: true},
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 							{
 								AggregationLength: 24,
@@ -720,12 +722,12 @@ func TestBGPSpeaker(t *testing.T) {
 								LocalPref:         100,
 								Communities:       map[uint32]bool{1234: true, 2345: true},
 								Peers:             []string{"peer1"},
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 							{
 								AggregationLength: 24,
 								LocalPref:         1000,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -791,7 +793,7 @@ func TestBGPSpeaker(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1006,7 +1008,7 @@ func TestBGPSpeaker(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1084,7 +1086,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 	}
 	newBGP = b.NewSessionManager
 	c, err := newController(controllerConfig{
-		MyNode:        "pandora",
+		MyNode:        nodeName,
 		DisableLayer2: true,
 		bgpType:       bgpNative,
 	})
@@ -1148,7 +1150,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1175,7 +1177,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								Addresses: []string{
 									"2.3.4.5",
 								},
-								NodeName: stringPtr("pandora"),
+								NodeName: stringPtr(nodeName),
 								Conditions: discovery.EndpointConditions{
 									Ready: pointer.BoolPtr(true),
 								},
@@ -1291,7 +1293,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								Addresses: []string{
 									"2.3.4.6",
 								},
-								NodeName: stringPtr("pandora"),
+								NodeName: stringPtr(nodeName),
 								Conditions: discovery.EndpointConditions{
 									Ready: pointer.BoolPtr(true),
 								},
@@ -1341,7 +1343,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								Addresses: []string{
 									"2.3.4.6",
 								},
-								NodeName: stringPtr("pandora"),
+								NodeName: stringPtr(nodeName),
 								Conditions: discovery.EndpointConditions{
 									Ready: pointer.BoolPtr(false),
 								},
@@ -1367,7 +1369,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								Addresses: []string{
 									"2.3.4.6",
 								},
-								NodeName: stringPtr("pandora"),
+								NodeName: stringPtr(nodeName),
 								Conditions: discovery.EndpointConditions{
 									Ready: pointer.BoolPtr(true),
 								},
@@ -1458,7 +1460,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								Addresses: []string{
 									"2.3.4.6",
 								},
-								NodeName: stringPtr("pandora"),
+								NodeName: stringPtr(nodeName),
 								Conditions: discovery.EndpointConditions{
 									Ready: pointer.BoolPtr(false),
 								},
@@ -1494,12 +1496,12 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 								AggregationLength: 32,
 								LocalPref:         100,
 								Communities:       map[uint32]bool{1234: true, 2345: true},
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 							{
 								AggregationLength: 24,
 								LocalPref:         1000,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1565,7 +1567,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1782,7 +1784,7 @@ func TestBGPSpeakerEPSlices(t *testing.T) {
 						BGPAdvertisements: []*config.BGPAdvertisement{
 							{
 								AggregationLength: 32,
-								Nodes:             map[string]bool{"pandora": true},
+								Nodes:             map[string]bool{nodeName: true},
 							},
 						},
 					},
@@ -1860,7 +1862,7 @@ func TestNodeSelectors(t *testing.T) {
 	}
 	newBGP = b.NewSessionManager
 	c, err := newController(controllerConfig{
-		MyNode:        "pandora",
+		MyNode:        nodeName,
 		DisableLayer2: true,
 		bgpType:       bgpNative,
 	})
@@ -1875,7 +1877,7 @@ func TestNodeSelectors(t *testing.T) {
 			BGPAdvertisements: []*config.BGPAdvertisement{
 				{
 					AggregationLength: 32,
-					Nodes:             map[string]bool{"pandora": true},
+					Nodes:             map[string]bool{nodeName: true},
 				},
 			},
 		},
@@ -1934,6 +1936,7 @@ func TestNodeSelectors(t *testing.T) {
 			desc: "Add node label that matches",
 			node: &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
 					Labels: map[string]string{
 						"foo": "bar",
 					},
@@ -1949,6 +1952,7 @@ func TestNodeSelectors(t *testing.T) {
 			desc: "Change node label so it no longer matches",
 			node: &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
 					Labels: map[string]string{
 						"foo": "baz",
 					},
@@ -1986,6 +1990,7 @@ func TestNodeSelectors(t *testing.T) {
 			desc: "Change node label back, still matches",
 			node: &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
 					Labels: map[string]string{
 						"foo": "bar",
 					},
@@ -2025,6 +2030,7 @@ func TestNodeSelectors(t *testing.T) {
 			desc: "Change node labels to match the other selector",
 			node: &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
 					Labels: map[string]string{
 						"host": "frontend",
 					},
