@@ -138,11 +138,13 @@ var _ = ginkgo.BeforeSuite(func() {
 	default:
 		bgptests.FRRContainers, err = bgptests.KindnetContainersSetup(cs, frrImage)
 		framework.ExpectNoError(err)
-		if !bgpNativeMode {
-			vrfFRRContainers, err := bgptests.VRFContainersSetup(cs, frrImage)
-			framework.ExpectNoError(err)
-			bgptests.FRRContainers = append(bgptests.FRRContainers, vrfFRRContainers...)
-		}
+		// VRF doesn't work on rhel. SO WE DISABLE IT
+		//
+		// if !bgpNativeMode {
+		// 	vrfFRRContainers, err := bgptests.VRFContainersSetup(cs, frrImage)
+		// 	framework.ExpectNoError(err)
+		// 	bgptests.FRRContainers = append(bgptests.FRRContainers, vrfFRRContainers...)
+		// }
 	}
 
 	clientconfig, err := framework.LoadConfig()
@@ -188,10 +190,12 @@ var _ = ginkgo.AfterSuite(func() {
 
 	err = bgptests.InfraTearDown(cs)
 	framework.ExpectNoError(err)
-	if !bgpNativeMode {
-		err = bgptests.InfraTearDownVRF(cs)
-		framework.ExpectNoError(err)
-	}
+	// VRF doesn't work on rhel. SO WE DISABLE IT
+	//
+	// if !bgpNativeMode {
+	// 	err = bgptests.InfraTearDownVRF(cs)
+	// 	framework.ExpectNoError(err)
+	// }
 	err = updater.Clean()
 	framework.ExpectNoError(err)
 
