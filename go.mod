@@ -15,7 +15,7 @@ require (
 	github.com/open-policy-agent/cert-controller v0.7.0
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_golang v1.16.0
 	golang.org/x/sys v0.8.0
 	k8s.io/api v0.26.4
 	k8s.io/apiextensions-apiserver v0.26.1
@@ -84,7 +84,7 @@ require (
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
-	github.com/prometheus/procfs v0.9.0 // indirect
+	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
